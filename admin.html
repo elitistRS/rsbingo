@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skybreakers Bingo — Admin</title>
+    <title>Redacted Bingo — Admin</title>
     <link rel="icon" href="https://cdn.discordapp.com/icons/1386222769238315120/e491d2ab03e0cb29ebaa095359ce1265.webp?size=32&quality=lossless">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Fira+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -169,7 +169,7 @@
 <div id="loginScreen" style="position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px">
     <div class="login-box">
         <h2>⚔ Admin Panel</h2>
-        <p>Skybreakers Bingo — Restricted Access</p>
+        <p>Redacted Bingo — Restricted Access</p>
         <input type="email" id="loginEmail" placeholder="Email address" onkeydown="if(event.key==='Enter')document.getElementById('loginPw').focus()">
         <input type="password" id="loginPw" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
         <button class="btn-login" onclick="doLogin()">Sign In</button>
@@ -181,7 +181,7 @@
 <div class="container">
     <a href="index.html" class="back-link">← Back to Bingo</a>
     <header class="header">
-        <h1>Skybreakers Admin</h1>
+        <h1>Redacted Admin</h1>
         <div class="subtitle">⚠ Full board control — handle with care</div>
     </header>
 
@@ -234,7 +234,7 @@
         <p class="section-sub">Create a new team. Use a seed for a fresh shuffle, or paste board data JSON to clone an exact board.</p>
         <div class="add-team-form">
             <input type="text" id="addTeamName" placeholder="Team name..." maxlength="30">
-            <input type="text" id="addTeamCode" placeholder="Join code (e.g. skybreak24)..." maxlength="30">
+            <input type="text" id="addTeamCode" placeholder="Join code (e.g. Redacted2)..." maxlength="30">
             <input type="number" id="addTeamSeed" placeholder="Seed (optional — leave blank for random)">
             <p class="hint">The seed controls the task shuffle and board layout. Same seed = same board. Leave blank for a random seed.</p>
             <div class="sw-expand-header" onclick="toggleBoardDataPaste()">
