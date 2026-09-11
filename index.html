@@ -106,7 +106,7 @@
             background: rgba(192, 57, 43, 0.15); border: 1px solid rgba(192, 57, 43, 0.3);
             border-radius: 3px; color: var(--danger); font-size: 0.55rem;
             line-height: 14px; text-align: center; cursor: pointer;
-            opacity: 0; transition: opacity 0.2s; z-index: 2;
+            opacity: 0.75; transition: opacity 0.2s; z-index: 2;
         }
         .tile.completed:hover .undo-btn { opacity: 1; }
         .tile .undo-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
@@ -558,17 +558,15 @@
                 tile.appendChild(icon);
             }
 
-            // Add undo button only on the LAST completed tile (highest chainIdx in completedIndices)
-            const completedArr = teamData.completedIndices || [];
-            const lastCompletedChainIdx = completedArr.length > 0 ? Math.max(...completedArr) : -1;
-            if (isCompleted && chainIdx === lastCompletedChainIdx) {
+            // Add an undo button to every completed tile
+            if (isCompleted) {
                 const btn = document.createElement('span');
                 btn.className = 'undo-btn';
                 btn.textContent = '✕';
                 btn.title = 'Undo this completion';
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    uncompleteLastTask();
+                    uncompleteTask(chainIdx);
                 });
                 tile.appendChild(btn);
             }
@@ -626,24 +624,22 @@
         await db.ref(`teams/${currentCode}`).update(updates);
     }
 
-    async function uncompleteLastTask() {
+    async function uncompleteTask(chainIdx) {
         if (!teamData) return;
         const chain = teamData.chain || { revealed: INITIAL_REVEALS, completed: 0 };
         const tasks = teamData.tasks || DEFAULT_TASKS;
         const completedIndices = teamData.completedIndices || [];
 
-        if (completedIndices.length === 0) return;
+        if (!completedIndices.includes(chainIdx)) return;
+        const task = tasks[chainIdx];
 
-        const lastChainIdx = Math.max(...completedIndices);
-        const lastTask = tasks[lastChainIdx];
-
-        // Reveal mode: if (!confirm(`Undo "${lastTask}"? This will also close the tile that was revealed by this completion.`)) return;
-        if (!confirm(`Undo "${lastTask}"?`)) return;
+        // Reveal mode: only allow undo on the last completed task and close its revealed tile.
+        if (!confirm(`Undo "${task}"?`)) return;
 
         const updates = {};
         const now = Date.now();
 
-        const newCompletedIndices = completedIndices.filter(i => i !== lastChainIdx);
+        const newCompletedIndices = completedIndices.filter(i => i !== chainIdx);
         updates['completedIndices'] = newCompletedIndices;
         updates['chain/completed'] = newCompletedIndices.length;
 
@@ -653,7 +649,7 @@
         // }
 
         updates[`log/${now}`] = {
-            action: 'uncomplete', task: lastTask, chainIndex: lastChainIdx,
+            action: 'uncomplete', task: task, chainIndex: chainIdx,
             time: new Date(now).toISOString()
         };
 
