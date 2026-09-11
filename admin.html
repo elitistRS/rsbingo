@@ -68,7 +68,12 @@
         .admin-tile.state-completed:hover { background: rgba(184,145,46,0.15); border-color: var(--accent-dim); }
         .admin-tile .chain-label { position: absolute; top: 2px; left: 3px; font-size: 0.45rem; opacity: 0.5; font-family: monospace; }
         .admin-tile .state-label { position: absolute; bottom: 2px; right: 3px; font-size: 0.5rem; opacity: 0.5; }
-        .admin-tile .group-icon { position: absolute; top: 3px; right: 4px; font-size: 0.7rem; line-height: 1; opacity: 0.9; }
+        .admin-tile .group-icon {
+            position: absolute; top: 3px; right: 4px; width: 14px; height: 14px;
+            background: var(--accent); opacity: 0.95;
+            -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='8' cy='7' r='4'/%3E%3Cpath d='M0 21c0-5 3.6-9 8-9s8 4 8 9H0z'/%3E%3Ccircle cx='17.5' cy='8.5' r='3.5'/%3E%3Cpath d='M15 14c5 0 9 3 9 7h-6c0-2.8-1.1-5.3-3-7z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='8' cy='7' r='4'/%3E%3Cpath d='M0 21c0-5 3.6-9 8-9s8 4 8 9H0z'/%3E%3Ccircle cx='17.5' cy='8.5' r='3.5'/%3E%3Cpath d='M15 14c5 0 9 3 9 7h-6c0-2.8-1.1-5.3-3-7z'/%3E%3C/svg%3E") center / contain no-repeat;
+        }
 
         .btn { padding: 8px 16px; font-size: 0.8rem; font-weight: 600; font-family: var(--font-body); cursor: pointer; border: none; border-radius: 5px; transition: all 0.2s; }
         .btn-reveal { background: transparent; color: var(--accent); border: 1px solid var(--accent-dim); }
@@ -216,7 +221,7 @@
         </div>
     </div>
 
-    <!-- Free Tasks -->
+    <!-- Free Tasks disabled for GoodBoyPoints
     <div class="section">
         <h2>⭐ Free Tasks</h2>
         <p class="section-sub">Always visible to every team. Changes apply globally on save.</p>
@@ -228,6 +233,7 @@
         </div>
         <button class="btn-save-free" onclick="freeSave()">💾 Save Free Tasks</button>
     </div>
+    -->
 
     <!-- Add Team -->
     <div class="section">
@@ -432,8 +438,9 @@
     }
 
     // ═══════════════════════════════════════════
-    //  FREE TASKS
+    //  FREE TASKS (DISABLED)
     // ═══════════════════════════════════════════
+    /*
     const DEFAULT_FREE_TASKS = [
         "Claim a quest cape",
         "Reach max total level",
@@ -485,6 +492,7 @@
         renderFreeList();
         showToast('✅ Free tasks saved!');
     }
+    */
 
     // ═══════════════════════════════════════════
     //  ADD TEAM (ADMIN)
@@ -548,7 +556,9 @@
             chain: { revealed: TOTAL, completed: 0 },
             // Reveal mode: chain: { revealed: 2, completed: 0 },
             completedIndices: [],
-            freeCompleted: {},
+            goodBoyPoints: 0,
+            goodBoyPointsTotal: 0,
+            // Free tasks disabled: freeCompleted: {},
             log,
             createdAt: firebase.database.ServerValue.TIMESTAMP,
             lastAutoReveal: firebase.database.ServerValue.TIMESTAMP
@@ -633,7 +643,7 @@
                 return `<div class="admin-tile ${stateClass}" title="Chain: ${letter} (${ci})&#10;${escapeHtml(task)}&#10;Click to cycle state" onclick="cycleTileState('${code}', ${ci})">
                     <span class="chain-label">${letter}</span>
                     ${escapeHtml(displayTask)}
-                    ${isGroupTask ? '<span class="group-icon" role="img" aria-label="Group task" title="Group task">👥</span>' : ''}
+                    ${isGroupTask ? '<span class="group-icon" role="img" aria-label="Group task" title="Group task"></span>' : ''}
                     <span class="state-label">${label}</span>
                 </div>`;
             }).join('');
@@ -647,6 +657,7 @@
                             <span class="seed-tag">seed: ${seedDisplay}</span>
                             <span>${completedSet.size} done</span>
                             <span>${TOTAL - completedSet.size} open</span>
+                            <span>GBP: ${data.goodBoyPoints || 0} available / ${data.goodBoyPointsTotal ?? data.goodBoyPoints ?? 0} total</span>
                             <!-- Reveal mode:
                             <span>${chain.revealed - completedSet.size} open</span>
                             <span>${TOTAL - chain.revealed} hidden</span> -->
@@ -665,6 +676,8 @@
                     <div class="chain-controls">
                         <!-- Reveal mode: <label>Revealed: <input type="number" min="0" max="${TOTAL}" value="${chain.revealed}" onchange="setChain('${code}', 'revealed', this.value)"></label> -->
                         <label>Completed: <input type="number" min="0" max="${TOTAL}" value="${chain.completed}" onchange="setChain('${code}', 'completed', this.value)"></label>
+                        <label>Available GBP: <input type="number" min="0" value="${data.goodBoyPoints || 0}" onchange="setGoodBoyPoints('${code}', 'goodBoyPoints', this.value)"></label>
+                        <label>Total earned: <input type="number" min="0" value="${data.goodBoyPointsTotal ?? data.goodBoyPoints ?? 0}" onchange="setGoodBoyPoints('${code}', 'goodBoyPointsTotal', this.value)"></label>
                     </div>
                     <div class="board-legend">
                         <!-- Reveal mode: <span><span class="swatch swatch-hidden"></span> Hidden</span> -->
@@ -764,6 +777,20 @@
         showToast(`${field} set to ${v}`);
     }
 
+    async function setGoodBoyPoints(code, field, value) {
+        let points = Math.max(0, parseInt(value) || 0);
+        const data = teamsCache[code] || {};
+        const current = Number(data.goodBoyPoints) || 0;
+        const totalEarned = Number(data.goodBoyPointsTotal ?? current) || 0;
+        if (field === 'goodBoyPointsTotal' && points < current) points = current;
+        const updates = { [field]: points };
+        if (field === 'goodBoyPoints' && points > totalEarned) updates.goodBoyPointsTotal = points;
+        const now = Date.now();
+        updates[`log/${now}`] = { action: 'admin-set-gbp', task: `${field} → ${points}`, time: new Date(now).toISOString(), source: 'admin' };
+        await db.ref(`teams/${code}`).update(updates);
+        showToast(`${field} set to ${points}`);
+    }
+
     async function adminReveal(code) {
         const data = teamsCache[code];
         if (!data) return;
@@ -805,7 +832,9 @@
             chain: { revealed: TOTAL, completed: 0 },
             // Reveal mode: chain: { revealed: 2, completed: 0 },
             completedIndices: [],
-            freeCompleted: {},
+            goodBoyPoints: 0,
+            goodBoyPointsTotal: 0,
+            // Free tasks disabled: freeCompleted: {},
             log: log,
             lastAutoReveal: now
         });
