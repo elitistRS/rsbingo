@@ -68,6 +68,7 @@
         .admin-tile.state-completed:hover { background: rgba(184,145,46,0.15); border-color: var(--accent-dim); }
         .admin-tile .chain-label { position: absolute; top: 2px; left: 3px; font-size: 0.45rem; opacity: 0.5; font-family: monospace; }
         .admin-tile .state-label { position: absolute; bottom: 2px; right: 3px; font-size: 0.5rem; opacity: 0.5; }
+        .admin-tile .group-icon { position: absolute; top: 3px; right: 4px; font-size: 0.7rem; line-height: 1; opacity: 0.9; }
 
         .btn { padding: 8px 16px; font-size: 0.8rem; font-weight: 600; font-family: var(--font-body); cursor: pointer; border: none; border-radius: 5px; transition: all 0.2s; }
         .btn-reveal { background: transparent; color: var(--accent); border: 1px solid var(--accent-dim); }
@@ -231,12 +232,12 @@
     <!-- Add Team -->
     <div class="section">
         <h2>➕ Add Team</h2>
-        <p class="section-sub">Create a new team. Use a seed for a fresh shuffle, or paste board data JSON to clone an exact board.</p>
+        <p class="section-sub">Create a new team. Every team uses the same board layout.</p>
         <div class="add-team-form">
             <input type="text" id="addTeamName" placeholder="Team name..." maxlength="30">
             <input type="text" id="addTeamCode" placeholder="Join code (e.g. Redacted2)..." maxlength="30">
             <input type="number" id="addTeamSeed" placeholder="Seed (optional — leave blank for random)">
-            <p class="hint">The seed controls the task shuffle and board layout. Same seed = same board. Leave blank for a random seed.</p>
+            <p class="hint">The seed controls the reveal order. Every team uses the same task positions.</p>
             <div class="sw-expand-header" onclick="toggleBoardDataPaste()">
                 <span class="sw-expand-label">Or paste board data JSON</span>
                 <span class="sw-expand-arrow" id="bdPasteArrow">▼</span>
@@ -530,21 +531,22 @@
         } else {
             seed = seedInput ? parseInt(seedInput) : Math.floor(Math.random() * 2147483647);
             if (isNaN(seed)) { showToast('Seed must be a number.'); return; }
-            tasks = seededShuffle(DEFAULT_TASKS, seed);
-            order = seededShuffle([...Array(TOTAL).keys()], seed + 1);
+            ({ tasks, order } = buildBoardData(seed));
         }
 
         const now = Date.now();
         const log = {};
-        for (let i = 0; i < 2; i++) {
-            log[now + i] = { action: 'reveal', task: tasks[i], chainIndex: i, time: new Date(now + i).toISOString(), source: 'initial' };
-        }
+        // Reveal mode:
+        // for (let i = 0; i < 2; i++) {
+        //     log[now + i] = { action: 'reveal', task: tasks[i], chainIndex: i, time: new Date(now + i).toISOString(), source: 'initial' };
+        // }
 
         const teamObj = {
             name,
             tasks,
             order,
-            chain: { revealed: 2, completed: 0 },
+            chain: { revealed: TOTAL, completed: 0 },
+            // Reveal mode: chain: { revealed: 2, completed: 0 },
             completedIndices: [],
             freeCompleted: {},
             log,
@@ -569,12 +571,20 @@
     // ═══════════════════════════════════════════
     const TOTAL = 25;
     const DEFAULT_TASKS = [
-        "Full Godsword (GWD1)", "Dragon Mattock/Heist/Warped Stone", "Raksha Unique", "5 Nex Uniques", "Arch-Glacor Broadcast",
-        "2 Kerapac Uniques", "4 Dragon Harpoons", "2 Zamorak Uniques", "1 Solak Unique", "2 ED2/ED3 Uniques",
-        "1 ROTS Shield", "Croesus/Gate of Elidinis Unique", "Main + OH Drygore", "Any Sanctum Unique", "Any Rasial Unique",
-        "Any Zuk Unique", "2 Araxxor Uniques", "2× 20+ Ancient Scales", "Telos Unique", "10 DKS Rings",
-        "2 ED2/ED3 Uniques (2)", "2 Rex Matriarch Uniques", "2 GWD2 Uniques", "KBD + KQ Head", "D Kite OR Royal Crossbow"
+        "5 GWD1 Uniques (No Nex)", "Dragon Mattock, Warped Stone or Heist BC", "1 Sanctum Unique (no lore book)", "3 broadcasts from Fleshhatcher", "2 Rex Matriarch Uniques",
+        "5 Nex Uniques (duplicates count)", "1 Croesus or Gate of Elidinis Unique (GBP)", "2 Araxxor Uniques", "2 GWD2 Uniques", "ED2 Uniques (GBP)",
+        "2 Kerapac Uniques", "1 ROTS Shield (GBP)", "1 Raksha Codex or Spike (GBP)", "1 KK Unique", "2 Drops of 20+ Ancient Scales (not doubled) (GBP)",
+        "1 Amascut Unique (GBP)", "100 Tectonic Energy (LS)", "1 Arch-Glacor Unique (Nilas, Leng Artefact, Scripture, Frozen Core or Pet)", "1 ED3 Unique (GBP)", "1 AOD Unique (GBP)",
+        "1 Rasial Unique", "1 Zuk Unique", "1 Zamorak Unique (GBP)", "1 Solak Unique (GBP)", "1 Telos/Vorkath Unique OR 25 Vorkath Spikes"
     ];
+
+    function buildBoardData(seed) {
+        const revealPositions = seededShuffle([...Array(TOTAL).keys()], seed);
+        const tasks = revealPositions.map(boardIndex => DEFAULT_TASKS[boardIndex]);
+        const order = Array(TOTAL);
+        revealPositions.forEach((boardIndex, chainIndex) => { order[boardIndex] = chainIndex; });
+        return { tasks, order };
+    }
 
     let teamsCache = {};
 
@@ -610,14 +620,20 @@
 
             const boardTiles = Array.from({ length: TOTAL }, (_, boardIdx) => {
                 const ci = order[boardIdx];
+                const task = tasks[ci];
+                const isGroupTask = task.includes('(GBP)');
+                const displayTask = task.replace(/\s*\(GBP\)/, '').trim();
                 let stateClass, label;
                 if (completedSet.has(ci))       { stateClass = 'state-completed'; label = '✓'; }
-                else if (ci < chain.revealed)   { stateClass = 'state-revealed';  label = '◉'; }
-                else                            { stateClass = 'state-hidden';    label = '?'; }
+                else                            { stateClass = 'state-revealed';  label = '◉'; }
+                // Reveal mode:
+                // else if (ci < chain.revealed) { stateClass = 'state-revealed'; label = '◉'; }
+                // else                          { stateClass = 'state-hidden';   label = '?'; }
                 const letter = String.fromCharCode(65 + ci);
-                return `<div class="admin-tile ${stateClass}" title="Chain: ${letter} (${ci})&#10;${escapeHtml(tasks[ci])}&#10;Click to cycle state" onclick="cycleTileState('${code}', ${ci})">
+                return `<div class="admin-tile ${stateClass}" title="Chain: ${letter} (${ci})&#10;${escapeHtml(task)}&#10;Click to cycle state" onclick="cycleTileState('${code}', ${ci})">
                     <span class="chain-label">${letter}</span>
-                    ${escapeHtml(tasks[ci])}
+                    ${escapeHtml(displayTask)}
+                    ${isGroupTask ? '<span class="group-icon" role="img" aria-label="Group task" title="Group task">👥</span>' : ''}
                     <span class="state-label">${label}</span>
                 </div>`;
             }).join('');
@@ -630,14 +646,16 @@
                             <span class="code">${code}</span>
                             <span class="seed-tag">seed: ${seedDisplay}</span>
                             <span>${completedSet.size} done</span>
+                            <span>${TOTAL - completedSet.size} open</span>
+                            <!-- Reveal mode:
                             <span>${chain.revealed - completedSet.size} open</span>
-                            <span>${TOTAL - chain.revealed} hidden</span>
+                            <span>${TOTAL - chain.revealed} hidden</span> -->
                             <span>Created ${created}</span>
                         </div>
                         <div class="expand-hint">${isExp ? '▲ Collapse' : '▼ Expand board'}</div>
                     </div>
                     <div class="team-actions" onclick="event.stopPropagation()">
-                        <button class="btn btn-reveal" onclick="adminReveal('${code}')">⚔ +1 Reveal</button>
+                        <!-- Reveal mode: <button class="btn btn-reveal" onclick="adminReveal('${code}')">⚔ +1 Reveal</button> -->
                         <button class="btn btn-edit-code" onclick="changeJoinCode('${code}', '${escapeHtml(data.name)}')">✏️ Code</button>
                         <button class="btn btn-reset" onclick="resetTeam('${code}', '${escapeHtml(data.name)}')">Reset</button>
                         <button class="btn btn-delete" onclick="deleteTeam('${code}', '${escapeHtml(data.name)}')">Delete</button>
@@ -645,12 +663,12 @@
                 </div>
                 <div class="admin-board-section">
                     <div class="chain-controls">
-                        <label>Revealed: <input type="number" min="0" max="${TOTAL}" value="${chain.revealed}" onchange="setChain('${code}', 'revealed', this.value)"></label>
+                        <!-- Reveal mode: <label>Revealed: <input type="number" min="0" max="${TOTAL}" value="${chain.revealed}" onchange="setChain('${code}', 'revealed', this.value)"></label> -->
                         <label>Completed: <input type="number" min="0" max="${TOTAL}" value="${chain.completed}" onchange="setChain('${code}', 'completed', this.value)"></label>
                     </div>
                     <div class="board-legend">
-                        <span><span class="swatch swatch-hidden"></span> Hidden</span>
-                        <span><span class="swatch swatch-revealed"></span> Revealed</span>
+                        <!-- Reveal mode: <span><span class="swatch swatch-hidden"></span> Hidden</span> -->
+                        <span><span class="swatch swatch-revealed"></span> Open</span>
                         <span><span class="swatch swatch-completed"></span> Completed</span>
                         <span style="margin-left: auto; font-style: italic;">Click tile to cycle state</span>
                     </div>
@@ -699,20 +717,21 @@
             updates['completedIndices'] = newCompleted;
             updates['chain/completed'] = newCompleted.length;
             updates[`log/${now}`] = { action: 'uncomplete', task: tasks[chainIdx], chainIndex: chainIdx, time: new Date(now).toISOString(), source: 'admin' };
-        } else if (chainIdx < chain.revealed) {
-            // REVEALED → COMPLETED
+        } else {
+            // OPEN → COMPLETED
             const newCompleted = [...completedIndices, chainIdx];
             updates['completedIndices'] = newCompleted;
             updates['chain/completed'] = newCompleted.length;
             updates[`log/${now}`] = { action: 'complete', task: tasks[chainIdx], chainIndex: chainIdx, time: new Date(now).toISOString(), source: 'admin' };
-        } else {
-            // HIDDEN → REVEALED (bump revealed to include this tile)
-            const newRevealed = chainIdx + 1;
-            updates['chain/revealed'] = newRevealed;
-            for (let i = chain.revealed; i <= chainIdx; i++) {
-                updates[`log/${now + i}`] = { action: 'reveal', task: tasks[i], chainIndex: i, time: new Date(now + i).toISOString(), source: 'admin' };
-            }
         }
+        // Reveal mode: change the else above to `else if (chainIdx < chain.revealed)` and enable:
+        // else {
+        //     const newRevealed = chainIdx + 1;
+        //     updates['chain/revealed'] = newRevealed;
+        //     for (let i = chain.revealed; i <= chainIdx; i++) {
+        //         updates[`log/${now + i}`] = { action: 'reveal', task: tasks[i], chainIndex: i, time: new Date(now + i).toISOString(), source: 'admin' };
+        //     }
+        // }
 
         await db.ref(`teams/${code}`).update(updates);
         showToast(`Tile "${tasks[chainIdx]}" updated`);
@@ -725,7 +744,7 @@
         const chain = data.chain || { revealed: 2, completed: 0 };
 
         if (field === 'completed') {
-            if (v > chain.revealed) v = chain.revealed;
+            // Reveal mode: if (v > chain.revealed) v = chain.revealed;
             const newCompleted = Array.from({ length: v }, (_, i) => i);
             await db.ref(`teams/${code}`).update({
                 'chain/completed': v,
@@ -763,19 +782,19 @@
     }
 
     async function resetTeam(code, name) {
-        if (!confirm(`Reset "${name}"? Reshuffles tasks and clears ALL progress.`)) return;
+        if (!confirm(`Reset "${name}" with the fixed board? This clears ALL progress.`)) return;
         const data = teamsCache[code];
         const teamName = data ? data.name : name;
         const createdAt = data ? data.createdAt : Date.now();
 
         const now = Date.now();
         const seed = Math.floor(Math.random() * 2147483647);
-        const tasks = seededShuffle(DEFAULT_TASKS, seed);
-        const order = seededShuffle([...Array(TOTAL).keys()], seed + 1);
+        const { tasks, order } = buildBoardData(seed);
         const log = {};
-        for (let i = 0; i < 2; i++) {
-            log[now + i] = { action: 'reveal', task: tasks[i], chainIndex: i, time: new Date(now + i).toISOString(), source: 'initial' };
-        }
+        // Reveal mode:
+        // for (let i = 0; i < 2; i++) {
+        //     log[now + i] = { action: 'reveal', task: tasks[i], chainIndex: i, time: new Date(now + i).toISOString(), source: 'initial' };
+        // }
 
         await db.ref(`teams/${code}`).set({
             name: teamName,
@@ -783,7 +802,8 @@
             seed: seed,
             tasks: tasks,
             order: order,
-            chain: { revealed: 2, completed: 0 },
+            chain: { revealed: TOTAL, completed: 0 },
+            // Reveal mode: chain: { revealed: 2, completed: 0 },
             completedIndices: [],
             freeCompleted: {},
             log: log,
