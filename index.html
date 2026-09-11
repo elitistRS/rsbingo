@@ -110,6 +110,10 @@
         }
         .tile.completed:hover .undo-btn { opacity: 1; }
         .tile .undo-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        .tile .group-icon {
+            position: absolute; top: 4px; left: 5px; font-size: clamp(0.65rem, 1.6vw, 0.85rem);
+            line-height: 1; opacity: 0.9; z-index: 1;
+        }
 
         @keyframes tileReveal {
             0% { transform: scale(0.8) rotateY(90deg); opacity: 0; }
@@ -173,6 +177,7 @@
         @media (max-width: 480px) {
             .bingo-board { gap: 5px; }
             .tile { font-size: 0.5rem; padding: 4px 2px; }
+            .tile .group-icon { top: 3px; left: 3px; font-size: 0.62rem; }
             .team-bar { flex-direction: column; text-align: center; }
             .lb-team { grid-template-columns: 28px 1fr 70px 50px; gap: 6px; padding: 8px; }
             .free-row-body { --free-cols: 2 !important; }
@@ -309,15 +314,16 @@
     // ═══════════════════════════════════════════
     //  CONFIG
     // ═══════════════════════════════════════════
-    const INITIAL_REVEALS = 2;
     const TOTAL_TASKS = 25;
+    const INITIAL_REVEALS = TOTAL_TASKS;
+    // Reveal mode: const INITIAL_REVEALS = 2;
 
     const DEFAULT_TASKS = [
-        "Full Godsword (GWD1)", "Dragon Mattock/Heist/Warped Stone", "Raksha Unique", "5 Nex Uniques", "Arch-Glacor Broadcast",
-        "2 Kerapac Uniques", "4 Dragon Harpoons", "2 Zamorak Uniques", "1 Solak Unique", "2 ED2/ED3 Uniques",
-        "1 ROTS Shield", "Croesus/Gate of Elidinis Unique", "Main + OH Drygore", "Any Sanctum Unique", "Any Rasial Unique",
-        "Any Zuk Unique", "2 Araxxor Uniques", "2× 20+ Ancient Scales", "Telos Unique", "10 DKS Rings",
-        "2 ED2/ED3 Uniques (2)", "2 Rex Matriarch Uniques", "2 GWD2 Uniques", "KBD + KQ Head", "D Kite OR Royal Crossbow"
+        "5 GWD1 Uniques (No Nex)", "Dragon Mattock, Warped Stone or Heist BC", "1 Sanctum Unique (no lore book)", "3 broadcasts from Fleshhatcher", "2 Rex Matriarch Uniques",
+        "5 Nex Uniques (duplicates count)", "1 Croesus or Gate of Elidinis Unique (GBP)", "2 Araxxor Uniques", "2 GWD2 Uniques", "ED2 Uniques (GBP)",
+        "2 Kerapac Uniques", "1 ROTS Shield (GBP)", "1 Raksha Codex or Spike (GBP)", "1 KK Unique", "2 Drops of 20+ Ancient Scales (not doubled) (GBP)",
+        "1 Amascut Unique (GBP)", "100 Tectonic Energy (LS)", "1 Arch-Glacor Unique (Nilas, Leng Artefact, Scripture, Frozen Core or Pet)", "1 ED3 Unique (GBP)", "1 AOD Unique (GBP)",
+        "1 Rasial Unique", "1 Zuk Unique", "1 Zamorak Unique (GBP)", "1 Solak Unique (GBP)", "1 Telos/Vorkath Unique OR 25 Vorkath Spikes"
     ];
 
     // Free tasks: always visible for all teams, stored globally in Firebase
@@ -476,17 +482,31 @@
             const boardIdx = Number(tile.dataset.boardIndex);
             const chainIdx = order[boardIdx];
 
-            const wasVisible = tile.classList.contains('revealed') || tile.classList.contains('completed');
             const isCompleted = completedSet.has(chainIdx);
-            const isRevealed  = chainIdx < chain.revealed && !isCompleted;
-            const isHidden    = chainIdx >= chain.revealed;
+            const isRevealed = !isCompleted;
+            const isHidden = false;
+            // Reveal mode:
+            // const isRevealed = chainIdx < chain.revealed && !isCompleted;
+            // const isHidden = chainIdx >= chain.revealed;
 
             // Remove old undo button
             const oldBtn = tile.querySelector('.undo-btn');
             if (oldBtn) oldBtn.remove();
 
             // Set text: only if visible
-            tile.innerText = (isCompleted || isRevealed) ? tasks[chainIdx] : '';
+            const task = tasks[chainIdx];
+            const isVisible = isCompleted || isRevealed;
+            const isGroupTask = task.includes('(GBP)');
+            tile.innerText = isVisible ? task.replace(/\s*\(GBP\)/, '').trim() : '';
+            if (isVisible && isGroupTask) {
+                const icon = document.createElement('span');
+                icon.className = 'group-icon';
+                icon.textContent = '👥';
+                icon.title = 'Group task';
+                icon.setAttribute('role', 'img');
+                icon.setAttribute('aria-label', 'Group task');
+                tile.appendChild(icon);
+            }
 
             // Add undo button only on the LAST completed tile (highest chainIdx in completedIndices)
             const completedArr = teamData.completedIndices || [];
@@ -508,11 +528,12 @@
             else if (isRevealed) tile.classList.add('revealed');
             else if (isCompleted) tile.classList.add('completed');
 
-            // Animate newly revealed
-            if ((isRevealed || isCompleted) && !wasVisible) {
-                tile.classList.add('just-revealed');
-                setTimeout(() => tile.classList.remove('just-revealed'), 600);
-            }
+            // Reveal mode:
+            // const wasVisible = tile.classList.contains('revealed') || tile.classList.contains('completed');
+            // if ((isRevealed || isCompleted) && !wasVisible) {
+            //     tile.classList.add('just-revealed');
+            //     setTimeout(() => tile.classList.remove('just-revealed'), 600);
+            // }
         });
     }
 
@@ -526,9 +547,9 @@
         const tasks = teamData.tasks || DEFAULT_TASKS;
         const chainIdx = order[boardIdx];
 
-        // Must be revealed but not yet completed
+        // Must not be completed
         const completedSet = new Set(teamData.completedIndices || []);
-        if (chainIdx >= chain.revealed) return;
+        // Reveal mode: if (chainIdx >= chain.revealed) return;
         if (completedSet.has(chainIdx)) return;
 
         const updates = {};
@@ -543,14 +564,14 @@
             time: new Date(now).toISOString()
         };
 
-        // Reveal the next unrevealed tile in the sequence (if any)
-        if (chain.revealed < tasks.length) {
-            updates['chain/revealed'] = chain.revealed + 1;
-            updates[`log/${now + 1}`] = {
-                action: 'reveal', task: tasks[chain.revealed], chainIndex: chain.revealed,
-                time: new Date(now + 1).toISOString(), source: 'completion'
-            };
-        }
+        // Reveal mode:
+        // if (chain.revealed < tasks.length) {
+        //     updates['chain/revealed'] = chain.revealed + 1;
+        //     updates[`log/${now + 1}`] = {
+        //         action: 'reveal', task: tasks[chain.revealed], chainIndex: chain.revealed,
+        //         time: new Date(now + 1).toISOString(), source: 'completion'
+        //     };
+        // }
 
         await db.ref(`teams/${currentCode}`).update(updates);
     }
@@ -566,7 +587,8 @@
         const lastChainIdx = Math.max(...completedIndices);
         const lastTask = tasks[lastChainIdx];
 
-        if (!confirm(`Undo "${lastTask}"? This will also close the tile that was revealed by this completion.`)) return;
+        // Reveal mode: if (!confirm(`Undo "${lastTask}"? This will also close the tile that was revealed by this completion.`)) return;
+        if (!confirm(`Undo "${lastTask}"?`)) return;
 
         const updates = {};
         const now = Date.now();
@@ -575,10 +597,10 @@
         updates['completedIndices'] = newCompletedIndices;
         updates['chain/completed'] = newCompletedIndices.length;
 
-        // Pull back the reveal that was triggered by this completion
-        if (chain.revealed > INITIAL_REVEALS) {
-            updates['chain/revealed'] = chain.revealed - 1;
-        }
+        // Reveal mode:
+        // if (chain.revealed > INITIAL_REVEALS) {
+        //     updates['chain/revealed'] = chain.revealed - 1;
+        // }
 
         updates[`log/${now}`] = {
             action: 'uncomplete', task: lastTask, chainIndex: lastChainIdx,
