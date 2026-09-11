@@ -110,9 +110,14 @@
         }
         .tile.completed:hover .undo-btn { opacity: 1; }
         .tile .undo-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        .group-icon, .gbp-icon {
+            display: inline-block; background: var(--accent);
+            -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='8' cy='7' r='4'/%3E%3Cpath d='M0 21c0-5 3.6-9 8-9s8 4 8 9H0z'/%3E%3Ccircle cx='17.5' cy='8.5' r='3.5'/%3E%3Cpath d='M15 14c5 0 9 3 9 7h-6c0-2.8-1.1-5.3-3-7z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='8' cy='7' r='4'/%3E%3Cpath d='M0 21c0-5 3.6-9 8-9s8 4 8 9H0z'/%3E%3Ccircle cx='17.5' cy='8.5' r='3.5'/%3E%3Cpath d='M15 14c5 0 9 3 9 7h-6c0-2.8-1.1-5.3-3-7z'/%3E%3C/svg%3E") center / contain no-repeat;
+        }
         .tile .group-icon {
-            position: absolute; top: 4px; left: 5px; font-size: clamp(0.65rem, 1.6vw, 0.85rem);
-            line-height: 1; opacity: 0.9; z-index: 1;
+            position: absolute; top: 4px; left: 5px; width: 17px; height: 17px;
+            opacity: 0.95; z-index: 1;
         }
 
         @keyframes tileReveal {
@@ -125,6 +130,30 @@
         .stats { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; }
         .progress-bar { background: var(--tile-bg); border-radius: 20px; height: 6px; margin-bottom: 24px; overflow: hidden; }
         .progress-bar .fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 20px; transition: width 0.4s ease; }
+
+        /* GOODBOYPOINTS */
+        .gbp-panel {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            background: linear-gradient(135deg, rgba(140,120,220,0.13), rgba(240,192,64,0.08));
+            border: 1px solid var(--purple-dim); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;
+        }
+        .gbp-info { display: flex; align-items: center; gap: 12px; }
+        .gbp-icon { width: 28px; height: 28px; flex-shrink: 0; }
+        .gbp-label { font-family: var(--font-display); font-size: 0.8rem; color: var(--purple); letter-spacing: 0.06em; }
+        .gbp-total { margin-top: 2px; font-size: 0.85rem; color: var(--text-muted); }
+        .gbp-count { color: var(--accent); font-size: 1.15rem; font-weight: 700; }
+        .gbp-lifetime { margin-top: 2px; font-size: 0.72rem; color: var(--text-muted); }
+        .gbp-reward { margin-top: 5px; font-size: 0.78rem; color: var(--accent); font-weight: 600; }
+        .gbp-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .gbp-button {
+            border: 1px solid var(--purple-dim); border-radius: 6px;
+            background: rgba(140,120,220,0.14); color: var(--purple); padding: 9px 16px;
+            font-family: var(--font-body); font-size: 0.82rem; font-weight: 700; cursor: pointer;
+        }
+        .gbp-button:hover:not(:disabled) { background: var(--purple); color: var(--bg); }
+        .gbp-button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .gbp-redeem { border-color: var(--accent-dim); color: var(--accent); background: rgba(240,192,64,0.08); }
+        .gbp-redeem:hover:not(:disabled) { background: var(--accent); color: var(--bg); }
 
         /* LOG */
         .log { background: var(--surface); border: 1px solid var(--tile-border); border-radius: 8px; padding: 16px; max-height: 200px; overflow-y: auto; }
@@ -177,10 +206,13 @@
         @media (max-width: 480px) {
             .bingo-board { gap: 5px; }
             .tile { font-size: 0.5rem; padding: 4px 2px; }
-            .tile .group-icon { top: 3px; left: 3px; font-size: 0.62rem; }
+            .tile .group-icon { top: 3px; left: 3px; width: 13px; height: 13px; }
             .team-bar { flex-direction: column; text-align: center; }
             .lb-team { grid-template-columns: 28px 1fr 70px 50px; gap: 6px; padding: 8px; }
             .free-row-body { --free-cols: 2 !important; }
+            .gbp-panel { align-items: stretch; flex-direction: column; }
+            .gbp-actions { width: 100%; }
+            .gbp-button { flex: 1; padding-inline: 8px; }
         }
 
         .hidden { display: none !important; }
@@ -275,13 +307,30 @@
         <div class="stats" id="statsDisplay">0 / 25 completed</div>
         <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
 
-        <!-- FREE ROW -->
+        <!-- FREE TASKS DISABLED FOR GOODBOYPOINTS
         <div class="free-row-wrapper" id="freeRowWrapper">
             <div class="free-row-header" onclick="toggleFreeRow()">
                 <span class="free-row-title">⭐ FREE TASKS — Always Open</span>
                 <span class="free-row-toggle open" id="freeRowToggle">▼</span>
             </div>
             <div class="free-row-body" id="freeRowBody"></div>
+        </div>
+        -->
+
+        <div class="gbp-panel">
+            <div class="gbp-info">
+                <span class="gbp-icon" role="img" aria-label="Group"></span>
+                <div>
+                    <div class="gbp-label">GoodBoyPoints</div>
+                    <div class="gbp-total"><span class="gbp-count" id="gbpCount">0</span> GBP available</div>
+                    <div class="gbp-lifetime">Total earned: <span id="gbpTotalEarned">0</span> GBP</div>
+                    <div class="gbp-reward" id="gbpFreeTiles">0 Free tiles available</div>
+                </div>
+            </div>
+            <div class="gbp-actions">
+                <button class="gbp-button" id="gbpAddButton" onclick="addGoodBoyPoint()">+1 GBP</button>
+                <button class="gbp-button gbp-redeem" id="gbpRedeemButton" onclick="redeemFreeTile()" disabled>Redeem (-4)</button>
+            </div>
         </div>
 
         <div class="board-wrapper">
@@ -326,12 +375,13 @@
         "1 Rasial Unique", "1 Zuk Unique", "1 Zamorak Unique (GBP)", "1 Solak Unique (GBP)", "1 Telos/Vorkath Unique OR 25 Vorkath Spikes"
     ];
 
-    // Free tasks: always visible for all teams, stored globally in Firebase
+    /* Free tasks disabled for GoodBoyPoints.
     const DEFAULT_FREE_TASKS = [
         "Claim a quest cape",
         "Reach max total level",
         "Complete a 5-star Elite Dungeon"
     ];
+    */
 
     // ═══════════════════════════════════════════
     //  DATA MODEL
@@ -444,7 +494,8 @@
     // ═══════════════════════════════════════════
     function renderBoard() {
         if (!teamData) return;
-        renderFreeRow();
+        renderGoodBoyPoints();
+        // Free tasks disabled: renderFreeRow();
         const tasks = teamData.tasks || DEFAULT_TASKS;
         const order = teamData.order || [...Array(TOTAL_TASKS).keys()];
         const chain = teamData.chain || { revealed: INITIAL_REVEALS, completed: 0 };
@@ -501,7 +552,6 @@
             if (isVisible && isGroupTask) {
                 const icon = document.createElement('span');
                 icon.className = 'group-icon';
-                icon.textContent = '👥';
                 icon.title = 'Group task';
                 icon.setAttribute('role', 'img');
                 icon.setAttribute('aria-label', 'Group task');
@@ -620,7 +670,7 @@
             .sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 30);
         if (!entries.length) { el.innerHTML = '<span class="log-empty">No tasks revealed yet...</span>'; return; }
 
-        const icons = { reveal: '⚔️', complete: '✅', uncomplete: '↩️' };
+        const icons = { reveal: '⚔️', complete: '✅', uncomplete: '↩️', 'good-boy-point': '👥', 'gbp-redeem': '🎟️' };
         const sourceLabels = { initial: ' (start)', auto: ' (bonus)', completion: '', admin: ' (admin)' };
 
         el.innerHTML = entries.map(e => {
@@ -631,8 +681,62 @@
     }
 
     // ═══════════════════════════════════════════
-    //  FREE ROW
+    //  GOODBOYPOINTS
     // ═══════════════════════════════════════════
+    function renderGoodBoyPoints() {
+        const points = Number(teamData?.goodBoyPoints) || 0;
+        const totalEarned = Number(teamData?.goodBoyPointsTotal ?? points) || 0;
+        const freeTiles = Math.floor(points / 4);
+        document.getElementById('gbpCount').textContent = points;
+        document.getElementById('gbpTotalEarned').textContent = totalEarned;
+        document.getElementById('gbpFreeTiles').textContent = `${freeTiles} Free tile${freeTiles === 1 ? '' : 's'} available`;
+        document.getElementById('gbpRedeemButton').disabled = points < 4;
+    }
+
+    async function addGoodBoyPoint() {
+        if (!teamData || !currentCode) return;
+        const button = document.getElementById('gbpAddButton');
+        button.disabled = true;
+        const result = await db.ref(`teams/${currentCode}`).transaction(data => {
+            if (!data) return;
+            const points = Number(data.goodBoyPoints) || 0;
+            const totalEarned = Number(data.goodBoyPointsTotal ?? points) || 0;
+            data.goodBoyPoints = points + 1;
+            data.goodBoyPointsTotal = totalEarned + 1;
+            return data;
+        });
+        if (result.committed) {
+            const now = Date.now();
+            await db.ref(`teams/${currentCode}/log/${now}`).set({
+                action: 'good-boy-point', task: '1 GoodBoyPoint earned',
+                time: new Date(now).toISOString()
+            });
+        }
+        button.disabled = false;
+    }
+
+    async function redeemFreeTile() {
+        if (!teamData || !currentCode) return;
+        const button = document.getElementById('gbpRedeemButton');
+        button.disabled = true;
+        const result = await db.ref(`teams/${currentCode}/goodBoyPoints`).transaction(value => {
+            const points = Number(value) || 0;
+            if (points < 4) return;
+            return points - 4;
+        });
+        if (result.committed) {
+            const now = Date.now();
+            await db.ref(`teams/${currentCode}/log/${now}`).set({
+                action: 'gbp-redeem', task: '1 Free tile redeemed (-4 GBP)',
+                time: new Date(now).toISOString()
+            });
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    //  FREE ROW (DISABLED)
+    // ═══════════════════════════════════════════
+    /*
     let freeTasks = [];
     let freeCompleted = {};
     function initFreeTasks() {
@@ -694,6 +798,7 @@
         body.classList.toggle('hidden', isOpen);
         toggle.classList.toggle('open', !isOpen);
     }
+    */
 
     // ═══════════════════════════════════════════
     //  UTILITIES
@@ -706,7 +811,7 @@
     //  BOOT
     // ═══════════════════════════════════════════
     initLeaderboard();
-    initFreeTasks();
+    // Free tasks disabled: initFreeTasks();
     initSecretWord();
     const saved = localStorage.getItem('rs3bingo_team');
     if (saved) {
